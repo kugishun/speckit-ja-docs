@@ -24,18 +24,12 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
-      - name: Detect project directory
-        run: |
-          if [ -f package.json ]; then DIR=.; else DIR=$(find . -maxdepth 3 -type f -name package.json -printf '%h
-          ' | head -n1); fi
-          echo "PROJECT_DIR=${DIR}" >> $GITHUB_ENV
-
       - name: Install dependencies
-        working-directory: ${{ env.PROJECT_DIR }}
+        working-directory: speckit-app
         run: npm ci --legacy-peer-deps
 
       - name: Run tests
-        working-directory: ${{ env.PROJECT_DIR }}
+        working-directory: speckit-app
         run: npm run test -- --runInBand
 
       - name: Upload coverage (optional)
