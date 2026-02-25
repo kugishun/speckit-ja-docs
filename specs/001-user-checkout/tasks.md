@@ -79,16 +79,16 @@ Phase 7: QA & Polish
 
 ### タスク一覧
 
-- [ ] T001 Create Next.js 15 project with App Router in `app/` directory
-- [ ] T002 [P] Configure TypeScript 5.x with strict mode enabled in `tsconfig.json`
+- [X] T001 Create Next.js 15 project with App Router in `app/` directory
+- [X] T002 [P] Configure TypeScript 5.x with strict mode enabled in `tsconfig.json`
 - [ ] T003 Initialize Supabase project and obtain credentials (URL, ANON_KEY, SERVICE_ROLE_KEY)
-- [ ] T004 [P] Create `lib/types.ts` with TypeScript interfaces: User, Product, Payment, and related types per data-model.md
-- [ ] T005 [P] Create `lib/supabase.ts` Supabase client wrappers (client-side and server-side) per research.md Topic 1
-- [ ] T006 Create `.env.local` configuration with Supabase credentials and Discord Webhook URL placeholder
-- [ ] T007 [P] Setup `.gitignore` to exclude `.env.local` and sensitive files per research.md Topic 10
-- [ ] T008 [P] Create `app/layout.tsx` root layout with Auth wrapper and basic styling
-- [ ] T009 [P] Setup Supabase Auth session management in `app/layout.tsx` per research.md Topic 1
-- [ ] T010 [P] Create default error boundary `app/error.tsx` with fallback UI in `components/ErrorBoundary.tsx`
+- [X] T004 [P] Create `lib/types.ts` with TypeScript interfaces: User, Product, Payment, and related types per data-model.md
+- [X] T005 [P] Create `lib/supabase.ts` Supabase client wrappers (client-side and server-side) per research.md Topic 1
+- [X] T006 Create `.env.local` configuration with Supabase credentials and Discord Webhook URL placeholder
+- [X] T007 [P] Setup `.gitignore` to exclude `.env.local` and sensitive files per research.md Topic 10
+- [X] T008 [P] Create `app/layout.tsx` root layout with Auth wrapper and basic styling
+- [X] T009 [P] Setup Supabase Auth session management in `app/layout.tsx` per research.md Topic 1
+- [X] T010 [P] Create default error boundary `app/error.tsx` with fallback UI in `components/ErrorBoundary.tsx`
 
 ---
 
