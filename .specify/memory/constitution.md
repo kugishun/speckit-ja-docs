@@ -1,50 +1,96 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!-- 
+  同期影響レポート: 憲法 v0.1.0（初版）
+  - source.md の要件をもとに初版憲法を作成
+  - 原則: ローカルファースト開発、責任の分離、明示的リトライポリシー、セキュリティファースト設計、シンプルさ重視
+  - バージョン: 0.1.0（初版）
+  - 批准日: 2026-02-25
+  - 最終更新日: 2026-02-25
+  - 更新が必要なテンプレート: plan-template.md (✅ 変更不要)、spec-template.md (✅ 変更不要)、tasks-template.md (✅ 変更不要)
+-->
 
-## Core Principles
+# デモ決済アプリケーション憲法
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+## 核心原則
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### I. ローカルファースト開発
+すべての機能はローカル開発環境で外部サービス依存なしに動作するように設計します。環境設定（Supabase認証情報、Discord Webhook URL）は `.env.local` に保存し、バージョン管理に**絶対にコミットしません**。開発は本番環境の複雑性よりもセットアップの容易性を優先します。ローカル開発ではモックサービスと静的フィクスチャの使用を認めます。
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. 責任の分離
+支払い処理（payments テーブル）と通知配信（discord_notifications テーブル）を厳密に分離します。各責務は独立したステータスライフサイクルを持ち、独立して成功・失敗できます。この分離によって、Discord通知配信が失敗してもトランザクションレコードが記録されることを保証し、データ整合性を維持し、支払い完了をブロックせずにリトライメカニズムを実現します。
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### III. 明示的リトライポリシー
+Discord Webhook通知は固定間隔の指数バックオフリトライを実装します：10秒、30秒、90秒、300秒（最大5回試行）。リトライ試行ごとにタイムスタンプ、HTTPステータスコード、エラー詳細をログに記録します。失敗した通知は `failed` ステータスでマークされ、管理者ダッシュボードに表示され、管理者による手動再キューイングを可能にします。
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### IV. セキュリティファースト設計
+Discord Webhook URLはクライアントサイドコードに**絶対に露出させません**。Webhook呼び出しはサーバーサイド API ルートまたは Server Action経由**ーのみ**で発生させます。行レベルセキュリティ（RLS）をすべての Supabase テーブルで有効にします。ユーザーアクセスは自分のトランザクションのみに制限し、管理者アクセスは user_metadata ロール経由で認証された管理者のみに制限します。
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### V. シンプルさ重視
+このアプリケーションはデモです。コア機能を実装するために必要な部分のみを実装します。実決済処理なし、サブスクリプション管理なし、分析機能なし。適切に静的な商品データを使用します。複雑なアーキテクチャより直接的なSQLクエリと単純なステートマシンを優先します。すべての機能は独立してテスト可能で独立してデプロイ可能でなければなりません。
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+## 技術設計
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+### 技術スタック
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- **フレームワーク**: Next.js（App Router）
+- **データベース**: Supabase（PostgreSQL）
+- **認証**: Supabase Auth（ロールベースメタデータ）
+- **通知**: Discord Webhook（HTTP POSTアウトバウンド、サーバーサイドのみ）
+- **環境**: `.env.local` によるローカル開発
 
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+### データ設計制約
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+**payments テーブル**（取引レコード）:
+- 必須項目: id（UUID）、transaction_id（表示用、ユニーク）、user_id（auth参照）、user_name、product_name、amount_jpy（整数）、status（pending/succeeded/failed）、created_at
+- status は通知配信から独立して進行
+- user_name は取引作成時に Supabase Auth プロフィールから非正規化して保存
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**discord_notifications テーブル**（通知配信状態）:
+- 必須項目: id（UUID）、payment_id（FK、ユニーク）、status（queued/sending/sent/retrying/failed）、attempt_count（0～5）、max_attempts（5固定）、next_attempt_at（タイムスタンプ）、last_attempt_at、last_error、created_at、updated_at
+- payment_id にはユニーク制約があり payments との1:1関係を保証
+- Discord送信コンテンツは payments テーブルとの JOIN で組み立て、通知テーブルに重複保存しない
+
+### RLS（行レベルセキュリティ）強制
+
+- **users_table（auth.users）**: Supabase Auth デフォルトポリシーを適用
+- **payments テーブル**: RLS有効化必須。ユーザーは自分の取引のみ表示、管理者はすべて表示
+- **discord_notifications テーブル**: RLS有効化必須。ユーザーは自分の支払いに紐づく通知のみ表示、管理者はすべて表示
+
+## 開発ワークフロー
+
+### 通知配信ライフサイクル
+
+1. **支払い完了時**: payments レコード作成（status=succeeded）、その後 discord_notifications レコード作成（status=queued、attempt_count=0、next_attempt_at=now()）
+2. **ディスパッチポーリング**: サーバーサイドディスパッチャー（API ルートまたはバックグラウンドワーカー）が定期的に status=queued または status=retrying かつ next_attempt_at <= now() のレコードをクエリ
+3. **ロック＆送信**: status を sending に更新（原子的にロック処理）、Discord Webhook呼び出し、HTTPレスポンス取得
+4. **結果処理**:
+   - HTTP 2xx → status=sent、完了とマーク
+   - HTTP 4xx/5xx またはネットワークエラー → status=retrying、指数バックオフ配列 [10, 30, 90, 300] を使用して next_attempt_at をスケジュール（attempt_count - 1 でインデックス）
+   - attempt_count >= max_attempts（5） → status=failed、リトライ停止
+5. **管理者可視性**: 失敗した通知は last_error 詳細を含む管理者ダッシュボードに表示。管理者は手動再キュー可能（status=queued にリセット、attempt_count=0、last_error クリア）
+
+### コードレビュー＆コンプライアンス
+
+すべてのプルリクエストは以下を検証します:
+- Webhook URL がクライアントサイドコード内に**出現していない**（ハードコードされた URL grep検査）
+- 新規テーブルの RLS ポリシーが有効化され、テストデータで検証
+- リトライロジックが指定された間隔と最大試行回数に一致
+- 支払い作成と通知キューイングのトランザクションテスト有無
+- 環境秘密がコミットされていない（.env.local パターンスキャン）
+
+## ガバナンス
+
+**この憲法はすべての設計・アーキテクチャ決定の権威的ソースです。** すべての機能、プルリクエスト、デプロイ決定は上記の原則と技術制約に準拠します。
+
+### 修正プロセス
+
+- 修正はこのファイルの上部に正当性コメント（同期影響レポート形式）で文書化
+- バージョンはセマンティックバージョニングに従い増分：MAJOR（原則削除の後方互換性破り）、MINOR（新原則追加または制約追加）、PATCH（明確化、文言修正）
+- LAST_AMENDED_DATE は承認日に更新
+
+### コンプライアンス検証
+
+- コードレビュー時に原則 II（責任分離）、III（リトライポリシー）、IV（セキュリティ）への準拠を検証
+- 機能仕様は原則 V（シンプルさ重視）で定義されたスコープを超過してはいけない
+- データベーススキーマレビュー時に RLS が有効化されており「データ設計制約」セクションに従っていることを確認
+
+**バージョン**: 0.1.0 | **批准日**: 2026-02-25 | **最終更新日**: 2026-02-25
