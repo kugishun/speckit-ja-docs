@@ -24,12 +24,25 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
+      - name: Detect project directory containing package.json
+        id: detect
+        run: |
+          set -e
+          PROJECT_FILE=$(find . -maxdepth 5 -name package.json -print -quit || true)
+          if [ -n "$PROJECT_FILE" ]; then
+            DIR=$(dirname "$PROJECT_FILE")
+          else
+            DIR=.
+          fi
+          echo "Found package.json at: $PROJECT_FILE"
+          echo "PROJECT_DIR=$DIR" >> $GITHUB_ENV
+
       - name: Install dependencies
-        working-directory: speckit-app
+        working-directory: ${{ env.PROJECT_DIR }}
         run: npm ci --legacy-peer-deps
 
       - name: Run tests
-        working-directory: speckit-app
+        working-directory: ${{ env.PROJECT_DIR }}
         run: npm run test -- --runInBand
 
       - name: Upload coverage (optional)
